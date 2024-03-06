@@ -303,6 +303,7 @@ class PlateHeader:
     scan_position: ScanPosition
     reads_per_well: float
     pmt_gain: Optional[str]
+    first_row: int
     num_rows: int
     excitation_wavelengths: Optional[list[int]]
     cutoff_filters: Optional[list[int]]
@@ -698,7 +699,9 @@ class PlateBlock(ABC, Block):
         ]
 
     def iter_wells(self) -> Iterator[str]:
-        for row in range(self.header.num_rows):
+        start_row = self.header.first_row - 1
+        end_row = start_row + self.header.num_rows
+        for row in range(start_row, end_row):
             for col in range(1, self.header.num_columns + 1):
                 yield f"{num_to_chars(row)}{col}"
 
@@ -748,7 +751,7 @@ class FluorescencePlateBlock(PlateBlock):
             pmt_gain,
             _,  # start_integration_time
             _,  # end_integration_time
-            _,  # first_row
+            first_row,  # first_row
             num_rows,
         ] = header[:31]
 
@@ -800,6 +803,7 @@ class FluorescencePlateBlock(PlateBlock):
 
         num_wells = try_int(num_wells_raw, "num_wells")
         num_columns = num_wells_to_n_columns(num_wells)
+        first_row_int = try_int_or_none(first_row) or 1
 
         return PlateHeader(
             name=name,
@@ -818,6 +822,7 @@ class FluorescencePlateBlock(PlateBlock):
             scan_position=scan_position,
             reads_per_well=try_float(reads_per_well, "reads_per_well"),
             pmt_gain=pmt_gain,
+            first_row=first_row_int,
             num_rows=try_int(num_rows, "num_rows"),
             excitation_wavelengths=excitation_wavelengths,
             cutoff_filters=cutoff_filters,
@@ -861,7 +866,7 @@ class LuminescencePlateBlock(PlateBlock):
             pmt_gain,
             _,  # start_integration_time
             _,  # end_integration_time
-            _,  # first_row
+            first_row,  # first_row
             num_rows,
         ] = header[:30]
 
@@ -875,6 +880,7 @@ class LuminescencePlateBlock(PlateBlock):
 
         num_wells = try_int(num_wells_raw, "num_wells")
         num_columns = num_wells_to_n_columns(num_wells)
+        first_row_int = try_int_or_none(first_row) or 1
 
         return PlateHeader(
             name=name,
@@ -893,6 +899,7 @@ class LuminescencePlateBlock(PlateBlock):
             scan_position=ScanPosition.NONE,
             reads_per_well=try_int(reads_per_well, "reads_per_well"),
             pmt_gain=pmt_gain,
+            first_row=first_row_int,
             num_rows=try_int(num_rows, "num_rows"),
             excitation_wavelengths=None,
             cutoff_filters=None,
@@ -927,7 +934,7 @@ class AbsorbancePlateBlock(PlateBlock):
             _,  # first_column
             _,  # num_columns
             num_wells_raw,
-            _,
+            first_row,
             num_rows_raw,
         ] = header[:21]
 
@@ -941,6 +948,7 @@ class AbsorbancePlateBlock(PlateBlock):
 
         num_wells = try_int(num_wells_raw, "num_wells")
         num_columns = num_wells_to_n_columns(num_wells)
+        first_row_int = try_int_or_none(first_row) or 1
 
         return PlateHeader(
             name=name,
@@ -959,6 +967,7 @@ class AbsorbancePlateBlock(PlateBlock):
             scan_position=ScanPosition.NONE,
             reads_per_well=0,
             pmt_gain=None,
+            first_row=first_row_int,
             num_rows=try_int(num_rows_raw, "num_rows"),
             excitation_wavelengths=None,
             cutoff_filters=None,
